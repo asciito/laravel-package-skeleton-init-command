@@ -53,20 +53,22 @@ class InitProjectCommand extends Command
     {
         $this->initData();
 
-        \Laravel\Prompts\info('Begin package initialization');
+        \Laravel\Prompts\info('Initializing Package');
 
-        spin(fn () => sleep(1) | $this->updateComposer(), 'Configuring composer.json');
+        $this->components->task('Configure composer', $this->updateComposer(...));
 
-        spin(fn () => sleep(1) | $this->updateReadme(), 'Updating README.md');
+        $this->components->task('Update README.md', $this->updateReadme(...));
 
-        spin(fn () => sleep(1) | $this->createServiceProviderClass(), 'Creating ServiceProvider class');
+        $this->components->task('Create Service Provider', $this->createServiceProviderClass(...));
 
-        spin(fn () => sleep(1) | $this->updateTests(), 'Updating Tests');
+        $this->components->task('Updating Tests', $this->updateTests(...));
+
+        $this->components->task('Updating License Copyrights', $this->updateLicense(...));
 
         render(<<<'HTML'
         <p>
             <span class="bg-green px-1 mr-2">DONE</span>
-            <span>Package initialized</span>
+            <span>Package Initialized</span>
         </p>
         HTML);
 
@@ -128,6 +130,11 @@ class InitProjectCommand extends Command
         $this->replaceOnPackageFile('/tests/Pest.php');
     }
 
+    protected function updateLicense(): void
+    {
+        $this->replaceOnPackageFile('/LICENSE.md');
+    }
+
     protected function cleanName(string $name): string
     {
         return str($name)->slug(' ')->title();
@@ -179,6 +186,8 @@ class InitProjectCommand extends Command
                     '{{author}}',
                     '{{author_email}}',
                     '{{title_package}}',
+                    '{{year}}',
+                    '{{copyright}}'
                 ],
                 [
                     $this->packageName,
@@ -190,6 +199,8 @@ class InitProjectCommand extends Command
                     $this->packageAuthor,
                     $this->packageAuthorEmail,
                     $this->cleanName($this->packageName),
+                    now()->year,
+                    $this->packageAuthor,
                 ]
             );
 
