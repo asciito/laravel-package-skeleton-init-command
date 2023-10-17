@@ -113,9 +113,9 @@ class InitProjectCommand extends Command
 
         $this->replaceOnPackageFile($file);
 
-        $newName = $this->getBasePath('src/'.$this->getClassName().'.php');
+        $newName = $this->getPackageBasePath('src/'.$this->getPackageClassName().'.php');
 
-        File::move($this->getBasePath($file), $newName);
+        File::move($this->getPackageBasePath($file), $newName);
     }
 
     protected function updateReadme(): void
@@ -153,7 +153,7 @@ class InitProjectCommand extends Command
         return $value;
     }
 
-    protected function getClassName(): string
+    protected function getPackageClassName(): string
     {
         if (str($this->packageClassName)->contains('ServiceProvider')) {
             return $this->packageClassName;
@@ -162,7 +162,7 @@ class InitProjectCommand extends Command
         return $this->packageClassName.'ServiceProvider';
     }
 
-    protected function getNamespace(bool $escape = false): string
+    protected function getPackageNamespace(bool $escape = false): string
     {
         return collect([$this->packageVendorName, $this->packageName])
             ->map(Str::studly(...))
@@ -171,7 +171,7 @@ class InitProjectCommand extends Command
 
     protected function replaceOnPackageFile(string $file): void
     {
-        $file = $this->getBasePath($file);
+        $file = $this->getPackageBasePath($file);
 
         $content = str(File::get($file))
             ->replace(
@@ -192,9 +192,9 @@ class InitProjectCommand extends Command
                     $this->packageName,
                     $this->packageVendorName,
                     $this->packageDescription,
-                    $this->getNamespace(),
-                    $this->getNamespace(true),
-                    $this->getClassName(),
+                    $this->getPackageNamespace(),
+                    $this->getPackageNamespace(true),
+                    $this->getPackageClassName(),
                     $this->packageAuthor,
                     $this->packageAuthorEmail,
                     $this->cleanName($this->packageName),
@@ -206,7 +206,7 @@ class InitProjectCommand extends Command
         File::replace($file, $content);
     }
 
-    protected function getBasePath(string ...$path): string
+    protected function getPackageBasePath(string ...$path): string
     {
         $path = array_filter(
             array_map(fn (string $p) => trim($p, DIRECTORY_SEPARATOR), $path)
