@@ -30,7 +30,7 @@ class InitProjectCommand extends Command
      *
      * @var string
      */
-    protected $description = 'Initialize the package';
+    protected $description = 'Initialize the Package configuration';
 
     protected string $packageName;
 
