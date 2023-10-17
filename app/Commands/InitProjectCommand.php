@@ -74,6 +74,9 @@ class InitProjectCommand extends Command
         return self::SUCCESS;
     }
 
+    /**
+     * Initialize the class properties from the options or by user's input
+     */
     protected function initData(): void
     {
         $package = $this->getValue('package', 'Package name', 'package-name', required: true);
@@ -102,11 +105,17 @@ class InitProjectCommand extends Command
         $this->packageAuthorEmail = $authorEmail;
     }
 
+    /**
+     * Update the composer.json file
+     */
     protected function updateComposer(): void
     {
         $this->replaceOnPackageFile('/composer.json');
     }
 
+    /**
+     * Create the ServiceProvider class for the package
+     */
     protected function createServiceProviderClass(): void
     {
         $file = 'src/PackageServiceProvider.php.stub';
@@ -118,32 +127,50 @@ class InitProjectCommand extends Command
         File::move($this->getPackageBasePath($file), $newName);
     }
 
+    /**
+     * Update the README.md file
+     */
     protected function updateReadme(): void
     {
         $this->replaceOnPackageFile('/README.md');
     }
 
+    /**
+     * Update the Tests files
+     */
     protected function updateTests(): void
     {
         $this->replaceOnPackageFile('/tests/TestCase.php');
         $this->replaceOnPackageFile('/tests/Pest.php');
     }
 
+    /**
+     * Update the LICENSE.md file
+     */
     protected function updateLicense(): void
     {
         $this->replaceOnPackageFile('/LICENSE.md');
     }
 
+    /**
+     * Convert the given value to title (very work) with space
+     */
     protected function cleanName(string $name): string
     {
         return str($name)->slug(' ')->title();
     }
 
+    /**
+     * Slugify the given identifier
+     */
     protected function slugify(string $identifier): string
     {
         return str($identifier)->slug();
     }
 
+    /**
+     * Get the value from the option or by requesting the user's input
+     */
     protected function getValue(string $option, string $label, string $placeholder = '', mixed $default = null, bool $required = false, \Closure $validate = null): mixed
     {
         $value = $this->option($option)
@@ -153,6 +180,9 @@ class InitProjectCommand extends Command
         return $value;
     }
 
+    /**
+     * The class name used for the service provider
+     */
     protected function getPackageClassName(): string
     {
         if (str($this->packageClassName)->contains('ServiceProvider')) {
@@ -162,6 +192,14 @@ class InitProjectCommand extends Command
         return $this->packageClassName.'ServiceProvider';
     }
 
+    /**
+     * The package namespace
+     *
+     * The package namespace is form between the package vendor name,
+     * and the package name
+     *
+     * @param bool $escape if the namespace should be escaped ("\\\\")
+     */
     protected function getPackageNamespace(bool $escape = false): string
     {
         return collect([$this->packageVendorName, $this->packageName])
@@ -169,6 +207,9 @@ class InitProjectCommand extends Command
             ->join('\\'.($escape ? '\\' : ''));
     }
 
+    /**
+     * Replace the placeholder with the values
+     */
     protected function replaceOnPackageFile(string $file): void
     {
         $file = $this->getPackageBasePath($file);
@@ -206,6 +247,11 @@ class InitProjectCommand extends Command
         File::replace($file, $content);
     }
 
+    /**
+     * The base path of the Package
+     *
+     * This method will join the given path(s) to the Package base path
+     */
     protected function getPackageBasePath(string ...$path): string
     {
         $path = array_filter(
