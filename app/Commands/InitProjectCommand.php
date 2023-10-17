@@ -4,6 +4,8 @@ namespace App\Commands;
 
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Str;
+use JetBrains\PhpStorm\NoReturn;
 use LaravelZero\Framework\Commands\Command;
 use function Laravel\Prompts\text;
 
@@ -18,11 +20,9 @@ class InitProjectCommand extends Command
                             {--package= : The package name}
                             {--vendor= : The package vendor name}
                             {--description= : The package description}
-                            {--package-homepage= : The package homepage}
                             {--class-name= : The name of the Service Provider class}
                             {--author= : The author\'s name}
-                            {--author-email= : The author\'s email}
-                            {--author-homepage= : The author\'s homepage}';
+                            {--author-email= : The author\'s email}';
 
     /**
      * The description of the command.
@@ -31,6 +31,18 @@ class InitProjectCommand extends Command
      */
     protected $description = 'Initialize the package';
 
+    protected string $packageName;
+
+    protected string $packageVendorName;
+
+    protected string $packageDescription;
+
+    protected string $packageClassName;
+
+    protected string $packageAuthor;
+
+    protected string $packageAuthorEmail;
+
     /**
      * Execute the console command.
      *
@@ -38,33 +50,30 @@ class InitProjectCommand extends Command
      */
     public function handle(): int
     {
-        $data = $this->getData();
+        $this->initData();
 
-        $this->updateComposer(
-            $data->get('meta'),
-            $data->get('author'),
-        );
+        $this->updateComposer();
 
-        $this->updateReadme($data->get('meta'));
+        $this->updateReadme();
 
-        $this->createServiceProviderClass($data->get('meta'));
+        $this->createServiceProviderClass();
 
-        $this->updateTests($data->get('meta'));
+        $this->updateTests();
 
         return self::SUCCESS;
     }
 
-    protected function getData(): Collection
+    protected function initData(): void
     {
-        $package     = $this->option('package')      ?? text('Package name', 'package-name' , required: true);
-        $vendor      = $this->option('vendor')       ?? text('Package vendor', 'vendor');
-        $description = $this->option('description')  ?? text('Package description', 'Write a short description of two lines at max', required: true);
-        $className   = $this->option('class-name')   ?? text('Service Provider class name', 'PackageServiceProvider');
-        $author      = $this->option('author')       ?? text('Author\'s name', required: true);
-        $authorEmail = $this->option('author-email') ?? text(
+        $package     = $this->getValue('package', 'Package name', 'package-name' , required: true);
+        $vendor      = $this->getValue('vendor', 'Package vendor', 'vendor');
+        $description = $this->getValue('description', 'Package description', 'Write a short description of two lines at max', required: true);
+        $className   = $this->getValue('class-name', 'Service Provider class name', 'PackageServiceProvider');
+        $author      = $this->getValue('author','Author\'s name', required: true);
+        $authorEmail = $this->getValue('author-email',
             'Author\'s email',
-            placeholder: 'john@doe.com',
-            required: true,
+            'john@doe.com',
+            true,
             validate: function (string $value) {
                 if (filter_var($value, FILTER_VALIDATE_EMAIL)) {
                     return null;
@@ -74,131 +83,107 @@ class InitProjectCommand extends Command
             },
         );
 
-        return collect([
-            'meta' => [
-                'package' => $this->slugify($package),
-                'vendor' => $this->slugify($vendor ?: str($author)->before(' ')),
-                'class-name' => $className ?: $this->cleanName($package),
-                'description' => $description,
-            ],
-            'author' => [
-                'name' => $author,
-                'email' => $authorEmail,
-            ],
-        ]);
+        $this->packageName = $this->slugify($package);
+        $this->packageVendorName = $this->slugify($vendor ?? $author);
+        $this->packageDescription = $description;
+        $this->packageClassName = Str::studly($this->cleanName($className ?? $this->packageName));
+        $this->packageAuthor = $this->cleanName($author);
+        $this->packageAuthorEmail = $authorEmail;
     }
 
-    protected function updateComposer(array $meta, array $author): void
+    protected function updateComposer(): void
     {
-        $file = $this->getBasePath('/composer.json');
-
-        $content = str(File::get($file))
-            ->replace(
-                [
-                    '<vendor>',
-                    '<package>',
-                    '<description>',
-                    '<namespace>',
-                    '<class_name>'
-                ],
-                [
-                    $meta['vendor'],
-                    $meta['package'],
-                    $meta['description'],
-                    collect([$meta['vendor'], $meta['package']])
-                        ->map($this->cleanName(...))
-                        ->join('\\\\'),
-                    $meta['class-name'],
-                ]
-            );
-
-        $content = $content
-            ->replace(
-                [
-                    '<author>',
-                    '<author_email>'
-                ],
-                [
-                    $author['name'],
-                    $author['email']
-                ]
-            );
-
-        File::replace($file, $content);
+        $this->replaceOnPackageFile('/composer.json');
     }
 
-    protected function createServiceProviderClass(array $meta): void
+    protected function createServiceProviderClass(): void
     {
-        $file = $this->getBasePath('src/PackageServiceProvider.php.stub');
+        $file = 'src/PackageServiceProvider.php.stub';
 
-        $content = str(File::get($file))
-            ->replace(
-                [
-                    '<namespace>',
-                    '<class_name>',
-                    '<package>'
-                ],
-                [
-                    collect([$meta['vendor'], $meta['package']])
-                        ->map($this->cleanName(...))
-                        ->join('\\'),
-                    $meta['class-name'],
-                    $meta['package'],
-                ]
-            );
+        $this->replaceOnPackageFile($file);
 
-        File::delete($file);
+        $newName = $this->getBasePath('src/'.$this->getClassName().'.php');
 
-        File::append($this->getBasePath('src/'.$meta['class-name'].'.php'), $content);
+        File::move($this->getBasePath($file), $newName);
     }
 
-    protected function updateReadme(array $meta): void
+    protected function updateReadme(): void
     {
-        $file = $this->getBasePath('/README.md');
-
-        $content = str(File::get($file))
-            ->replace(
-                [
-                    '<package>',
-                    '{{package-title}}',
-                    '{{package}}',
-                    '{{description}}'
-                ],
-                [
-                    $meta['package'],
-                    str($meta['package'])->title()->replace('-', ' '),
-                    $meta['package'],
-                    $meta['description']
-                ]
-            );
-
-        File::replace($file, $content);
+        $this->replaceOnPackageFile('/README.md');
     }
 
-    protected function updateTests(array $meta): void
+    protected function updateTests(): void
     {
-        $testCaseFile = $this->getBasePath('/tests/TestCase.php');
-        $pestFile = $this->getBasePath('/tests/Pest.php');
-
-        $package = $this->cleanName($meta['package']);
-
-        $testCaseContent = str(File::get($testCaseFile))->replace('<package>', $package);
-        $pestContent = str(File::get($pestFile))->replace('<package>', $package);
-
-        File::replace($testCaseFile, $testCaseContent);
-        File::replace($pestFile, $pestContent);
+        $this->replaceOnPackageFile('/tests/TestCase.php');
+        $this->replaceOnPackageFile('/tests/Pest.php');
     }
 
     protected function cleanName(string $name): string
     {
-        return str($name)
-            ->slug(' ')
-            ->studly();
+        return str($name)->slug(' ')->title();
     }
 
     protected function slugify(string $identifier): string
     {
         return str($identifier)->slug();
+    }
+
+    protected function getValue(string $option, string $label, string $placeholder = '', mixed $default = null, bool $required = false, \Closure $validate = null): mixed
+    {
+        $value = $this->option($option)
+            ?? text($label, $placeholder, required: $required, validate: $validate)
+            ?: $default;
+
+        return $value;
+    }
+
+    protected function getClassName(): string
+    {
+        if (str($this->packageClassName)->contains('ServiceProvider')) {
+            return $this->packageClassName;
+        }
+
+        return $this->packageClassName.'ServiceProvider';
+    }
+
+    protected function getNamespace(bool $escape = false): string
+    {
+        return collect([$this->packageVendorName, $this->packageName])
+            ->map(Str::studly(...))
+            ->join('\\'.($escape ? '\\' : ''));
+    }
+
+    protected function replaceOnPackageFile(string $file): void
+    {
+        $file = $this->getBasePath($file);
+
+        $content = str(File::get($file))
+            ->replace(
+                [
+                    '{{package}}',
+                    '{{vendor}}',
+                    '{{description}}',
+                    '{{namespace}}',
+                    '{{escape_namespace}}',
+                    '{{class_name}}',
+                    '{{author}}',
+                    '{{author_email}}',
+                    '{{title_package}}',
+                ],
+                [
+                    $this->packageName,
+                    $this->packageVendorName,
+                    $this->packageDescription,
+                    $this->getNamespace(),
+                    $this->getNamespace(true),
+                    $this->getClassName(),
+                    $this->packageAuthor,
+                    $this->packageAuthorEmail,
+                    $this->cleanName($this->packageName),
+                ]
+            );
+
+        File::replace($file, $content);
     }
 
     protected function getBasePath(string ...$path): string
