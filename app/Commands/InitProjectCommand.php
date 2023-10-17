@@ -53,7 +53,7 @@ class InitProjectCommand extends Command
     {
         $this->initData();
 
-        \Laravel\Prompts\info('');
+        \Laravel\Prompts\info('Begin package initialization');
 
         spin(fn () => sleep(1) | $this->updateComposer(), 'Configuring composer.json');
 
