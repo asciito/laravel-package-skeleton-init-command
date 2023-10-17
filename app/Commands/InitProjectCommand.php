@@ -6,7 +6,6 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 use LaravelZero\Framework\Commands\Command;
 
-use function Laravel\Prompts\spin;
 use function Laravel\Prompts\text;
 use function Termwind\render;
 
@@ -187,7 +186,7 @@ class InitProjectCommand extends Command
                     '{{author_email}}',
                     '{{title_package}}',
                     '{{year}}',
-                    '{{copyright}}'
+                    '{{copyright}}',
                 ],
                 [
                     $this->packageName,
