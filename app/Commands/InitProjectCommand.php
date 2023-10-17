@@ -5,8 +5,9 @@ namespace App\Commands;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 use LaravelZero\Framework\Commands\Command;
-use function Laravel\Prompts\text;
+
 use function Laravel\Prompts\spin;
+use function Laravel\Prompts\text;
 use function Termwind\render;
 
 class InitProjectCommand extends Command
@@ -62,23 +63,23 @@ class InitProjectCommand extends Command
 
         spin(fn () => sleep(1) | $this->updateTests(), 'Updating Tests');
 
-        render(<<<HTML
-<p>
-    <span class="bg-green px-1 mr-2">DONE</span>
-    <span>Package initialized</span>
-</p>
-HTML);
+        render(<<<'HTML'
+        <p>
+            <span class="bg-green px-1 mr-2">DONE</span>
+            <span>Package initialized</span>
+        </p>
+        HTML);
 
         return self::SUCCESS;
     }
 
     protected function initData(): void
     {
-        $package     = $this->getValue('package', 'Package name', 'package-name' , required: true);
-        $vendor      = $this->getValue('vendor', 'Package vendor', 'vendor');
+        $package = $this->getValue('package', 'Package name', 'package-name', required: true);
+        $vendor = $this->getValue('vendor', 'Package vendor', 'vendor');
         $description = $this->getValue('description', 'Package description', 'Write a short description of two lines at max', required: true);
-        $className   = $this->getValue('class-name', 'Service Provider class name', 'PackageServiceProvider');
-        $author      = $this->getValue('author','Author\'s name', required: true);
+        $className = $this->getValue('class-name', 'Service Provider class name', 'PackageServiceProvider');
+        $author = $this->getValue('author', 'Author\'s name', required: true);
         $authorEmail = $this->getValue('author-email',
             'Author\'s email',
             'john@doe.com',
@@ -198,9 +199,9 @@ HTML);
     protected function getBasePath(string ...$path): string
     {
         $path = array_filter(
-            array_map(fn(string $p) => trim($p, DIRECTORY_SEPARATOR), $path)
+            array_map(fn (string $p) => trim($p, DIRECTORY_SEPARATOR), $path)
         );
 
-        return join(DIRECTORY_SEPARATOR, [getcwd(), ...$path]);
+        return implode(DIRECTORY_SEPARATOR, [getcwd(), ...$path]);
     }
 }
