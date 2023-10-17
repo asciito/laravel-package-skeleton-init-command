@@ -2,12 +2,12 @@
 
 namespace App\Commands;
 
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
-use JetBrains\PhpStorm\NoReturn;
 use LaravelZero\Framework\Commands\Command;
 use function Laravel\Prompts\text;
+use function Laravel\Prompts\spin;
+use function Termwind\render;
 
 class InitProjectCommand extends Command
 {
@@ -52,13 +52,22 @@ class InitProjectCommand extends Command
     {
         $this->initData();
 
-        $this->updateComposer();
+        \Laravel\Prompts\info('');
 
-        $this->updateReadme();
+        spin(fn () => sleep(1) | $this->updateComposer(), 'Configuring composer.json');
 
-        $this->createServiceProviderClass();
+        spin(fn () => sleep(1) | $this->updateReadme(), 'Updating README.md');
 
-        $this->updateTests();
+        spin(fn () => sleep(1) | $this->createServiceProviderClass(), 'Creating ServiceProvider class');
+
+        spin(fn () => sleep(1) | $this->updateTests(), 'Updating Tests');
+
+        render(<<<HTML
+<p>
+    <span class="bg-green px-1 mr-2">DONE</span>
+    <span>Package initialized</span>
+</p>
+HTML);
 
         return self::SUCCESS;
     }
